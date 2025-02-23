@@ -5,23 +5,19 @@ import { Globe2, Link, Loader2 } from 'lucide-react';
 
 const API_KEY = process.env.NEXT_PUBLIC_CRAWLER_API_KEY!;
 
+interface Metadata {
+  title?: string;
+  description?: string;
+  [key: string]: string | undefined;
+}
+
 interface ScrapeResult {
   success: boolean;
   data: {
     markdown?: string;
     html?: string;
-    metadata?: {
-      title?: string;
-      description?: string;
-      [key: string]: any;
-    };
+    metadata?: Metadata;
   };
-}
-
-interface CrawlResult {
-  success: boolean;
-  id: string;
-  url: string;
 }
 
 interface CrawlStatus {
@@ -32,11 +28,7 @@ interface CrawlStatus {
   data: Array<{
     markdown?: string;
     html?: string;
-    metadata?: {
-      title?: string;
-      description?: string;
-      [key: string]: any;
-    };
+    metadata?: Metadata;
   }>;
 }
 
