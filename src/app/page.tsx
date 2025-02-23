@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Globe2, Link, Loader2 } from 'lucide-react';
 
 const API_KEY = process.env.NEXT_PUBLIC_CRAWLER_API_KEY!;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
 interface Metadata {
   title?: string;
@@ -43,7 +44,7 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${process.env.API_BASE_URL}/scrape`, {
+      const response = await fetch(`${API_BASE_URL}/scrape`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,7 +56,13 @@ export default function Home() {
         })
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${text}`);
+      }
       
       if (!response.ok) {
         throw new Error(data.message || 'Failed to scrape URL');
@@ -74,7 +81,7 @@ export default function Home() {
       setLoading(true);
       setError(null);
 
-      const crawlResponse = await fetch(`${process.env.API_BASE_URL}/crawl`, {
+      const crawlResponse = await fetch(`${API_BASE_URL}/crawl`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,29 +94,47 @@ export default function Home() {
         })
       });
 
-      const crawlResult = await crawlResponse.json();
+      const crawlText = await crawlResponse.text();
+      let crawlResult;
+      try {
+        crawlResult = JSON.parse(crawlText);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${crawlText}`);
+      }
       
       if (!crawlResponse.ok) {
         throw new Error(crawlResult.message || 'Failed to start crawl');
       }
 
       const pollInterval = setInterval(async () => {
-        const statusResponse = await fetch(`${process.env.API_BASE_URL}/crawl/${crawlResult.id}`, {
-          headers: {
-            'Authorization': `Bearer ${API_KEY}`
+        try {
+          const statusResponse = await fetch(`${API_BASE_URL}/crawl/${crawlResult.id}`, {
+            headers: {
+              'Authorization': `Bearer ${API_KEY}`
+            }
+          });
+
+          const statusText = await statusResponse.text();
+          let statusData;
+          try {
+            statusData = JSON.parse(statusText);
+          } catch (e) {
+            throw new Error(`Invalid JSON response: ${statusText}`);
           }
-        });
 
-        const statusData = await statusResponse.json();
-
-        if (statusData.status === 'completed' || statusData.status === 'failed') {
+          if (statusData.status === 'completed' || statusData.status === 'failed') {
+            clearInterval(pollInterval);
+            setLoading(false);
+            if (statusData.status === 'failed') {
+              setError('Crawl failed');
+            } else {
+              setResult(statusData);
+            }
+          }
+        } catch (err) {
           clearInterval(pollInterval);
+          setError(err instanceof Error ? err.message : 'An error occurred');
           setLoading(false);
-          if (statusData.status === 'failed') {
-            setError('Crawl failed');
-          } else {
-            setResult(statusData);
-          }
         }
       }, 5000);
 
