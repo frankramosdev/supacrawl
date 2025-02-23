@@ -60,7 +60,7 @@ export default function Home() {
       let data;
       try {
         data = JSON.parse(text);
-      } catch (_e) {
+      } catch {
         throw new Error(`Invalid JSON response: ${text}`);
       }
       
@@ -98,7 +98,7 @@ export default function Home() {
       let crawlResult;
       try {
         crawlResult = JSON.parse(crawlText);
-      } catch (_e) {
+      } catch {
         throw new Error(`Invalid JSON response: ${crawlText}`);
       }
       
@@ -118,7 +118,7 @@ export default function Home() {
           let statusData;
           try {
             statusData = JSON.parse(statusText);
-          } catch (_e) {
+          } catch {
             throw new Error(`Invalid JSON response: ${statusText}`);
           }
 
