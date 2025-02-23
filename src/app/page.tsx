@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Globe2, Link, Loader2 } from 'lucide-react';
+import { Globe2, Link, Loader2, Copy } from 'lucide-react';
 
 const API_KEY = process.env.NEXT_PUBLIC_CRAWLER_API_KEY!;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
@@ -223,8 +223,23 @@ export default function Home() {
               {/* Results */}
               {result && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 space-y-4">
-                  <h2 className="text-2xl font-semibold text-slate-200">Results</h2>
-                  <div className="relative group">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-semibold text-slate-200">Results</h2>
+                    <button
+                      onClick={() => {
+                        const resultText = document.getElementById('resultsText')?.querySelector('pre')?.textContent;
+                        if (resultText) {
+                          navigator.clipboard.writeText(resultText)
+                            .catch(err => console.error('Failed to copy text:', err));
+                        }
+                      }}
+                      className="p-2 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-slate-200 transition-colors"
+                      aria-label="Copy results"
+                    >
+                      <Copy className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div id="resultsText" className="relative group">
                     <div className="absolute -inset-px bg-gradient-to-r from-blue-500 to-emerald-500 rounded-xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
                     <pre className="relative p-4 bg-slate-800/90 rounded-xl overflow-auto text-sm text-slate-300">
                       {JSON.stringify(result, null, 2)}
