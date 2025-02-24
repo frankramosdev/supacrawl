@@ -34,11 +34,6 @@ interface CrawlStatus {
   }>;
 }
 
-interface TextToSpeechState {
-  isLoading: boolean;
-  error: string | null;
-}
-
 // Add this utility function
 async function generateSpeech(text: string) {
   const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Rachel voice
