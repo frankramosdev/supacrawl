@@ -34,19 +34,24 @@ interface CrawlStatus {
   }>;
 }
 
-// Update the generateSpeech function with better error handling
+// Update the generateSpeech function with proper API key handling
 async function generateSpeech(text: string) {
   const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Rachel voice
   
   try {
+    // Check if API key is available
+    if (!ELEVENLABS_API_KEY) {
+      throw new Error('ElevenLabs API key is not configured');
+    }
+
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, // Remove /stream endpoint
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
       {
         method: 'POST',
         headers: {
           'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY
+          'xi-api-key': ELEVENLABS_API_KEY.trim(), // Ensure no whitespace
         },
         body: JSON.stringify({
           text,
@@ -58,6 +63,10 @@ async function generateSpeech(text: string) {
         })
       }
     );
+
+    if (response.status === 401) {
+      throw new Error('Invalid ElevenLabs API key. Please check your configuration.');
+    }
 
     if (!response.ok) {
       const errorData = await response.text();
