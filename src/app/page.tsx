@@ -34,36 +34,51 @@ interface CrawlStatus {
   }>;
 }
 
-// Add this utility function
+// Update the generateSpeech function with better error handling
 async function generateSpeech(text: string) {
   const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Rachel voice
   
-  const response = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/stream`,
-    {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': ELEVENLABS_API_KEY
-      },
-      body: JSON.stringify({
-        text,
-        model_id: 'eleven_monolingual_v1',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5
-        }
-      })
+  try {
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, // Remove /stream endpoint
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_monolingual_v1',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('ElevenLabs API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
+      throw new Error(`Failed to generate speech: ${response.status} ${response.statusText}`);
     }
-  );
 
-  if (!response.ok) {
-    throw new Error('Failed to generate speech');
+    const audioBlob = await response.blob();
+    if (!audioBlob || audioBlob.size === 0) {
+      throw new Error('Received empty audio response');
+    }
+
+    return URL.createObjectURL(audioBlob);
+  } catch (error) {
+    console.error('Text-to-speech error:', error);
+    throw error;
   }
-
-  const audioBlob = await response.blob();
-  return URL.createObjectURL(audioBlob);
 }
 
 export default function Home() {
@@ -198,6 +213,10 @@ export default function Home() {
         throw new Error('No text available to convert to speech');
       }
 
+      if (text.length > 5000) {
+        text = text.substring(0, 5000); // ElevenLabs has a character limit
+      }
+
       // Stop any currently playing audio
       if (audioElement) {
         audioElement.pause();
@@ -215,8 +234,9 @@ export default function Home() {
         setAudioElement(null);
       });
 
-      audio.addEventListener('error', () => {
-        setError('Error playing audio');
+      audio.addEventListener('error', (e) => {
+        console.error('Audio playback error:', e);
+        setError('Error playing audio: ' + (e.error?.message || 'Unknown error'));
         setIsPlaying(false);
         setAudioElement(null);
       });
@@ -225,6 +245,7 @@ export default function Home() {
       await audio.play();
 
     } catch (err) {
+      console.error('Text to speech error:', err);
       setError(err instanceof Error ? err.message : 'Failed to convert text to speech');
       setIsPlaying(false);
     } finally {
