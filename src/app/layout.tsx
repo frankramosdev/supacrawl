@@ -18,7 +18,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <PlausibleProvider domain="supacrawl.com">
+        <PlausibleProvider 
+          domain="supacrawl.com"
+          trackFileDownloads={true}
+          hash={true}
+          trackOutboundLinks={true}
+          pageviewProps={true}
+          revenue={true}
+          taggedEvents={true}
+        >
           {children}
         </PlausibleProvider>
       </body>
