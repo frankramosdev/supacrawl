@@ -15,6 +15,7 @@
     "@types/react-dom": "^18.0.0",
     "lucide-react": "^0.475.0",
     "next": "latest",
+    "next-plausible": "^3.12.4",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
