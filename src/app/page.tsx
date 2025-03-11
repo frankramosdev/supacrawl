@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Globe2, Link, Loader2, Copy, Volume2, VolumeX } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Link, Loader2, Copy, Volume2, VolumeX } from 'lucide-react';
 
 const API_KEY = process.env.NEXT_PUBLIC_CRAWLER_API_KEY!;
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL!;
@@ -99,6 +99,53 @@ export default function Home() {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const crawlButtonRef = useRef<HTMLButtonElement>(null);
 
+  const handleCrawl = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const crawlResponse = await fetch(`${API_BASE_URL}/crawl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({ url })
+      });
+
+      if (!crawlResponse.ok) {
+        const errorData = await crawlResponse.json();
+        throw new Error(errorData.error || 'Failed to crawl website');
+      }
+
+      const crawlData = await crawlResponse.json();
+      setResult(crawlData);
+
+      // Poll for status updates
+      const intervalId = setInterval(async () => {
+        const statusResponse = await fetch(`${API_BASE_URL}/crawl-status?id=${crawlData.id}`, {
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`
+          }
+        });
+
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          setResult(statusData);
+
+          if (statusData.status === 'completed' || statusData.status === 'failed') {
+            clearInterval(intervalId);
+            setLoading(false);
+          }
+        }
+      }, 2000);
+
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred while crawling the website');
+      setLoading(false);
+    }
+  }, [url]);
+
   // Add keyboard shortcut for crawl functionality
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -114,7 +161,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loading, url]);
+  }, [loading, url, handleCrawl]);
 
   const handleScrape = async () => {
     try {
@@ -149,76 +196,6 @@ export default function Home() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCrawl = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const crawlResponse = await fetch(`${API_BASE_URL}/crawl`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`
-        },
-        body: JSON.stringify({
-          url,
-          limit: 100,
-          scrapeOptions: { formats: ['markdown', 'html'] }
-        })
-      });
-
-      const crawlText = await crawlResponse.text();
-      let crawlResult;
-      try {
-        crawlResult = JSON.parse(crawlText);
-      } catch {
-        throw new Error(`Invalid JSON response: ${crawlText}`);
-      }
-      
-      if (!crawlResponse.ok) {
-        throw new Error(crawlResult.message || 'Failed to start crawl');
-      }
-
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(`${API_BASE_URL}/crawl/${crawlResult.id}`, {
-            headers: {
-              'Authorization': `Bearer ${API_KEY}`
-            }
-          });
-
-          const statusText = await statusResponse.text();
-          let statusData;
-          try {
-            statusData = JSON.parse(statusText);
-          } catch {
-            throw new Error(`Invalid JSON response: ${statusText}`);
-          }
-
-          if (statusData.status === 'completed' || statusData.status === 'failed') {
-            clearInterval(pollInterval);
-            setLoading(false);
-            if (statusData.status === 'failed') {
-              setError('Crawl failed');
-            } else {
-              setResult(statusData);
-            }
-          }
-        } catch (err) {
-          clearInterval(pollInterval);
-          setError(err instanceof Error ? err.message : 'An error occurred');
-          setLoading(false);
-        }
-      }, 5000);
-
-      return () => clearInterval(pollInterval);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
       setLoading(false);
     }
   };
