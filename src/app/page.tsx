@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Globe2, Link, Loader2, Copy, Volume2, VolumeX } from 'lucide-react';
 
 const API_KEY = process.env.NEXT_PUBLIC_CRAWLER_API_KEY!;
@@ -97,6 +97,24 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const crawlButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Add keyboard shortcut for crawl functionality
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Alt+C shortcut for crawl
+      if (e.ctrlKey && e.altKey && e.key === 'c') {
+        if (!loading && url) {
+          handleCrawl();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [loading, url]);
 
   const handleScrape = async () => {
     try {
@@ -304,7 +322,7 @@ export default function Home() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <button
                   onClick={handleScrape}
                   disabled={loading || !url}
@@ -321,20 +339,16 @@ export default function Home() {
                   </span>
                 </button>
 
+                {/* Hidden crawl button that can be triggered programmatically */}
                 <button
+                  ref={crawlButtonRef}
                   onClick={handleCrawl}
                   disabled={loading || !url}
-                  className="relative group px-6 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold hover:from-emerald-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  className="hidden"
                   aria-label="Crawl entire website"
+                  aria-hidden="true"
                 >
-                  <span className="flex items-center justify-center gap-2">
-                    {loading ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Globe2 className="h-5 w-5" />
-                    )}
-                    {loading ? 'Processing...' : 'Crawl Website'}
-                  </span>
+                  Crawl Website
                 </button>
               </div>
 
